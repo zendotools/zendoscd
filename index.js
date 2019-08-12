@@ -49,6 +49,8 @@ table.on('child_changed', function(snapshot)
     }
 });
 
+console.log("zendoscd started")
+
 rl.on('line', (line) => {
     
     const command = line.toLowerCase().trim()
