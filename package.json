@@ -1,0 +1,17 @@
+{
+  "name": "zendoscd",
+  "version": "1.0.0",
+  "description": "pushes updates to the zendomaster",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "dpurdy",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "firebase": "^6.3.4",
+    "osc-js": "^2.0.3",
+    "readline": "^1.3.0"
+  }
+}
