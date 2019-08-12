@@ -20,7 +20,6 @@ var config =
 
 firebase.initializeApp(config);
 
-//"127.0.0.1", 5278);
 const osc = new OSC({ plugin: new OSC.DatagramPlugin, udpClient: { port: 5278 } })
 osc.open()
 
@@ -31,8 +30,6 @@ var players = {}
 
 table.on('child_changed', function(snapshot) 
 {
-    console.log(snapshot.val)
-
     var key = snapshot.key;
     var msg = snapshot.val();
 
@@ -49,7 +46,8 @@ table.on('child_changed', function(snapshot)
     }
 });
 
-console.log("zendoscd started")
+console.log("zendoscd started.")
+console.log("commands: print | reset | exit <return>.")
 
 rl.on('line', (line) => {
     
@@ -61,13 +59,27 @@ rl.on('line', (line) => {
       
         print();
         break;
+
+      case 'exit':
+        process.exit(0);
+        break;
+
+      case 'reset':
+        
+        table.remove()
+        .then(function() {
+          console.log("reset succeeded.")
+        })
+        .catch(function(error) {
+          console.log("reset failed: " + error.message)
+        });
+        break;
     
       default:
         break;
     }
   
   });
-
 
   function print() 
   {
