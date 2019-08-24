@@ -70,13 +70,7 @@ rl.on('line', (line) => {
 
       case 'reset':
         
-        table.remove()
-        .then(function() {
-          console.log("reset succeeded.")
-        })
-        .catch(function(error) {
-          console.log("reset failed: " + error.message)
-        });
+        reset(); 
         break;
     
       default:
@@ -84,6 +78,19 @@ rl.on('line', (line) => {
     }
   
   });
+
+  function reset()
+  {
+    table.remove()
+        .then(function() {
+          console.log("reset succeeded.")
+        })
+        .catch(function(error) {
+          console.log("reset failed: " + error.message)
+        });
+        
+      players = {}
+  }
 
   function print() 
   {
