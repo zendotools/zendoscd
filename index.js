@@ -39,10 +39,14 @@ table.on('child_changed', function(snapshot)
 
       players[key] = msg
 
-      const message = new OSC.Message(key, msg.progress)
+      let progress = msg.progress
 
-      osc.send( message, { host : "127.0.0.1", port: 5278 } )
-
+      if(progress != null)
+      {
+        const message = new OSC.Message(key, msg.progress)
+        osc.send( message, { host : "127.0.0.1", port: 5278 } )
+      }
+      
     }
 });
 
