@@ -37,11 +37,20 @@ table.on('child_changed', function(snapshot)
 
       key = key.replace("_", ".")
 
+      let player = players[key]
+
+      let previousProgress = null
+      
+      if(player != null)
+      {
+        previousProgress = player.progress
+      }
+
       players[key] = msg
 
       let progress = msg.progress
 
-      if(progress != null)
+      if(progress != null && previousProgress != progress)
       {
         const message = new OSC.Message(key, msg.progress)
         osc.send( message, { host : "127.0.0.1", port: 5278 } )
@@ -81,15 +90,20 @@ rl.on('line', (line) => {
 
   function reset()
   {
+
+    var database = firebase.database();
+    var table = database.ref("players")
+
     table.remove()
         .then(function() {
           console.log("reset succeeded.")
+          players = {}
         })
         .catch(function(error) {
           console.log("reset failed: " + error.message)
         });
         
-      players = {}
+      
   }
 
   function print() 
