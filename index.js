@@ -81,6 +81,10 @@ rl.on('line', (line) => {
         
         reset(); 
         break;
+
+      case 'donate':
+        donate();
+        break;
     
       default:
         break;
@@ -118,6 +122,34 @@ rl.on('line', (line) => {
       }
     }
   }
+
+  function donate()
+  {
+    const RippleAPI = require('ripple-lib').RippleAPI;
+
+    const api = new RippleAPI ({
+        server: 'wss://s1.ripple.com' // Public rippled server
+      });
+
+    api.connect().then(() => 
+    {
+      const myAddress = 'rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn';
+
+      return api.getAccountInfo(myAddress);
+
+    }).then(info => 
+    {
+      console.log(info);
+    }).then(() => 
+    {
+      return api.disconnect();
+    }).then(() => 
+    {
+      console.log('donated');
+    }).catch(console.error);
+
+  }
+
   //rl.on("p" , (line) => {
     //console.log(`Received: ${line}`);
   //});
