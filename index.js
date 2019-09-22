@@ -28,6 +28,8 @@ var table = database.ref("players")
 
 var players = {}
 
+var donationsEnabled = false;
+
 table.on('child_changed', function(snapshot) 
 {
     var key = snapshot.key;
@@ -54,13 +56,15 @@ table.on('child_changed', function(snapshot)
       {
         const message = new OSC.Message(key, msg.progress)
         osc.send( message, { host : "127.0.0.1", port: 5278 } )
+
+        if(donationsEnabled) { donate(); }
       }
       
     }
 });
 
 console.log("zendoscd started.")
-console.log("commands: print | reset | exit <return>.")
+console.log("commands: print | donate | reset | exit <return>.")
 
 rl.on('line', (line) => {
     
@@ -102,12 +106,11 @@ rl.on('line', (line) => {
         .then(function() {
           console.log("reset succeeded.")
           players = {}
+          donationsEnabled = false
         })
         .catch(function(error) {
           console.log("reset failed: " + error.message)
         });
-        
-      
   }
 
   function print() 
@@ -125,28 +128,33 @@ rl.on('line', (line) => {
 
   function donate()
   {
+
+    const testnet = 'wss://s.altnet.rippletest.net:51233';
+    const mainet = 'wss://s1.ripple.com';
+    const devnet = '???';
+
+    donationsEnabled = true;
+
     const RippleAPI = require('ripple-lib').RippleAPI;
 
     const api = new RippleAPI ({
-        server: 'wss://s1.ripple.com' // Public rippled server
+        server: testnet
       });
 
-      const sender = "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe";
-      const secret = "a";
-      const destination = "rUCzEr6jrEyMpjhs4wSdQdz4g8Y382NxfM";
+      const sender = "rnizuhJE84YuvAS82Rhmdg5pXQb3DirFzR";
+      const secret = "shc11XNQiPymAJ3qc1WzKx6dhghmZ";
+      const destination = "rsEFXRNVBZZM2gnNp7ombogbGWZUS33T6b";
       const tag = 0
 
     api.connect().then(() => 
     {
       async function doPrepare() 
       {
-        
-
         const preparedTx = await api.prepareTransaction(
-        {
+          {
             "TransactionType": "Payment",
             "Account": sender,
-            "Amount": api.xrpToDrops("22"), // Same as "Amount": "22000000"
+            "Amount": api.xrpToDrops("1"),
             "Destination": destination
           }, 
           {
@@ -167,11 +175,11 @@ rl.on('line', (line) => {
 
     return doPrepare();
 
-    }).then(info =>   
+    }).then(tx =>   
     {
-      console.log(info);
+      console.log(tx);
 
-      const response = api.sign(info, secret)
+      const response = api.sign(tx, secret)
 
       const txID = response.id
 
@@ -181,37 +189,29 @@ rl.on('line', (line) => {
 
       console.log("Signed blob:", txBlob)
 
-      async function doSubmit(txBlob) 
+      async function doSubmit(txID, txBlob) 
       {
 
         const latestLedgerVersion = await api.getLedgerVersion()
-
         const result = await api.submit(txBlob)
 
         console.log("Tentative result code:", result.resultCode)
         console.log("Tentative result message:", result.resultMessage)
 
-        // Return the earliest ledger index this transaction could appear in
-        // as a result of this submission, which is the first one after the
-        // validated ledger at time of submission.
-        return latestLedgerVersion + 1
+        return { id: txID, version: latestLedgerVersion + 1 }
       }
 
-      api.on('ledger', ledger => {
-        console.log("Ledger version", ledger.ledgerVersion, "was just validated.")
-        if (ledger.ledgerVersion > maxLedgerVersion) {
-          console.log("If the transaction hasn't succeeded by now, it's expired")
-        }
-      })
+    return doSubmit(txID, txBlob)
 
-    return doSubmit(txBlob)
-
-    }).then((earliestLedgerVersion) => 
+    }).then((txInfo) => 
     {
-        async function checkTx() 
+        async function checkTx(txInfo) 
         {
           try 
           {
+            const earliestLedgerVersion = txInfo.version
+            const txID = txInfo.id
+
             tx = await api.getTransaction(txID, {minLedgerVersion: earliestLedgerVersion})
             console.log("Transaction result:", tx.outcome.result)
             console.log("Balance changes:", JSON.stringify(tx.outcome.balanceChanges))
@@ -222,13 +222,12 @@ rl.on('line', (line) => {
           }
         }
 
-        checkTx();
-
-        return api.disconnect();
+        //checkTx(txInfo);
 
     }).then(() => 
     {
       console.log('donated');
+      return api.disconnect();
     }).catch(console.error);
 
   }
