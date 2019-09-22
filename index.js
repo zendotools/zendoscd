@@ -24,6 +24,9 @@ const osc = new OSC({ plugin: new OSC.DatagramPlugin, udpClient: { port: 5278 } 
 osc.open()
 
 var database = firebase.database();
+
+
+
 var table = database.ref("players")
 
 var players = {}
@@ -35,7 +38,42 @@ table.on('child_changed', function(snapshot)
     var key = snapshot.key;
     var msg = snapshot.val();
 
-    if(msg != null) {
+    if(msg != null) 
+    {
+
+      key = key.replace("_", ".")
+
+      let player = players[key]
+
+      let previousProgress = null
+      
+      if(player != null)
+      {
+        previousProgress = player.progress
+      }
+
+      players[key] = msg
+
+      let progress = msg.progress
+
+      if(progress != null && previousProgress != progress)
+      {
+        const message = new OSC.Message(key, msg.progress)
+        osc.send( message, { host : "127.0.0.1", port: 5278 } )
+
+        if(donationsEnabled) { donate(); }
+      }
+      
+    }
+});
+
+table.on('child_added', function(snapshot) 
+{
+    var key = snapshot.key;
+    var msg = snapshot.val();
+
+    if(msg != null) 
+    {
 
       key = key.replace("_", ".")
 
