@@ -131,18 +131,101 @@ rl.on('line', (line) => {
         server: 'wss://s1.ripple.com' // Public rippled server
       });
 
+      const sender = "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe";
+      const secret = "a";
+      const destination = "rUCzEr6jrEyMpjhs4wSdQdz4g8Y382NxfM";
+      const tag = 0
+
     api.connect().then(() => 
     {
-      const myAddress = 'rf1BiGeXwwQoi8Z2ueFYTEXSwuJYfV2Jpn';
+      async function doPrepare() 
+      {
+        
 
-      return api.getAccountInfo(myAddress);
+        const preparedTx = await api.prepareTransaction(
+        {
+            "TransactionType": "Payment",
+            "Account": sender,
+            "Amount": api.xrpToDrops("22"), // Same as "Amount": "22000000"
+            "Destination": destination
+          }, 
+          {
+            // Expire this transaction if it doesn't execute within ~5 minutes:
+            "maxLedgerVersionOffset": 75
+          }
+        )
 
-    }).then(info => 
+        const maxLedgerVersion = preparedTx.instructions.maxLedgerVersion
+      
+        console.log("Prepared transaction instructions:", preparedTx.txJSON)
+        console.log("Transaction cost:", preparedTx.instructions.fee, "XRP")
+        console.log("Transaction expires after ledger:", maxLedgerVersion)
+        
+        return preparedTx.txJSON
+
+    }
+
+    return doPrepare();
+
+    }).then(info =>   
     {
       console.log(info);
-    }).then(() => 
+
+      const response = api.sign(info, secret)
+
+      const txID = response.id
+
+      console.log("Identifying hash:", txID)
+
+      const txBlob = response.signedTransaction
+
+      console.log("Signed blob:", txBlob)
+
+      async function doSubmit(txBlob) 
+      {
+
+        const latestLedgerVersion = await api.getLedgerVersion()
+
+        const result = await api.submit(txBlob)
+
+        console.log("Tentative result code:", result.resultCode)
+        console.log("Tentative result message:", result.resultMessage)
+
+        // Return the earliest ledger index this transaction could appear in
+        // as a result of this submission, which is the first one after the
+        // validated ledger at time of submission.
+        return latestLedgerVersion + 1
+      }
+
+      api.on('ledger', ledger => {
+        console.log("Ledger version", ledger.ledgerVersion, "was just validated.")
+        if (ledger.ledgerVersion > maxLedgerVersion) {
+          console.log("If the transaction hasn't succeeded by now, it's expired")
+        }
+      })
+
+    return doSubmit(txBlob)
+
+    }).then((earliestLedgerVersion) => 
     {
-      return api.disconnect();
+        async function checkTx() 
+        {
+          try 
+          {
+            tx = await api.getTransaction(txID, {minLedgerVersion: earliestLedgerVersion})
+            console.log("Transaction result:", tx.outcome.result)
+            console.log("Balance changes:", JSON.stringify(tx.outcome.balanceChanges))
+          } 
+          catch(error) 
+          {
+            console.log("Couldn't get transaction outcome:", error)
+          }
+        }
+
+        checkTx();
+
+        return api.disconnect();
+
     }).then(() => 
     {
       console.log('donated');
@@ -150,12 +233,5 @@ rl.on('line', (line) => {
 
   }
 
-  //rl.on("p" , (line) => {
-    //console.log(`Received: ${line}`);
-  //});
 
-//firebase.database().ref('users/' + userId).set({
-  //  username: name,
-    //email: email,
-   // profile_picture : imageUrl
- // });
+  
