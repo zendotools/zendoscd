@@ -1,37 +1,32 @@
-const OSC = require("osc-js");
-const firebase = require("firebase");
-const read = require('readline');
+  const OSC = require("osc-js");
+  const firebase = require("firebase");
+  const read = require('readline');
 
-const rl = read.createInterface({
+  const rl = read.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-var config = 
-{
-    apiKey: "AIzaSyC9ctnmbntIyud9b2LrjZGEoDBlCOX_BiA",
-    authDomain: "zendo-v1.firebaseapp.com",
-    databaseURL: "https://zendo-v1.firebaseio.com",
-    projectId: "zendo-v1",
-    storageBucket: "zendo-v1.appspot.com",
-    messagingSenderId: "1050567670060",
-    appId: "1:1050567670060:web:9f392d667834c056"
-  };
+  var config = 
+  {
+      apiKey: "AIzaSyC9ctnmbntIyud9b2LrjZGEoDBlCOX_BiA",
+      authDomain: "zendo-v1.firebaseapp.com",
+      databaseURL: "https://zendo-v1.firebaseio.com",
+      projectId: "zendo-v1",
+      storageBucket: "zendo-v1.appspot.com",
+      messagingSenderId: "1050567670060",
+      appId: "1:1050567670060:web:9f392d667834c056"
+    };
 
-firebase.initializeApp(config);
+  firebase.initializeApp(config);
 
-const osc = new OSC({ plugin: new OSC.DatagramPlugin, udpClient: { port: 5278 } })
-osc.open()
+  const osc = new OSC({ plugin: new OSC.DatagramPlugin, udpClient: { port: 5278 } })
+  osc.open()
 
-var database = firebase.database();
-
-
-
-var table = database.ref("players")
-
-var players = {}
-
-var donationsEnabled = false;
+  var database = firebase.database();
+  var table = database.ref("players")
+  var players = {}
+  var donationsEnabled = false;
 
 table.on('child_changed', function(snapshot) 
 {
@@ -41,7 +36,12 @@ table.on('child_changed', function(snapshot)
     if(msg != null) 
     {
 
-      key = key.replace("_", ".")
+      if(key.includes("_"))
+      {
+        key = key.replace("_", ".")
+
+        if(donationsEnabled) { donate(); }
+      }
 
       let player = players[key]
 
@@ -52,57 +52,44 @@ table.on('child_changed', function(snapshot)
         previousProgress = player.progress
       }
 
-      players[key] = msg
-
       let progress = msg.progress
+
+      players[key] = progress
 
       if(progress != null && previousProgress != progress)
       {
         const message = new OSC.Message(key, msg.progress)
-        osc.send( message, { host : "127.0.0.1", port: 5278 } )
-
-        if(donationsEnabled) { donate(); }
+        osc.send( message, { host : "127.0.0.1", port: 5278 } ) 
       }
       
     }
 });
 
-table.on('child_added', function(snapshot) 
-{
-    var key = snapshot.key;
-    var msg = snapshot.val();
+  table.on('child_added', function(snapshot) 
+  {
+      var key = snapshot.key;
+      var msg = snapshot.val();
 
-    if(msg != null) 
-    {
-
-      key = key.replace("_", ".")
-
-      let player = players[key]
-
-      let previousProgress = null
-      
-      if(player != null)
+      if(msg != null) 
       {
-        previousProgress = player.progress
-      }
+        key = key.replace("_", ".")
 
-      players[key] = msg
+        const player = players[key];
 
-      let progress = msg.progress
+        if(player == null) 
+        {
+          players[key] = msg.progress
 
-      if(progress != null && previousProgress != progress)
-      {
-        const message = new OSC.Message(key, msg.progress)
-        osc.send( message, { host : "127.0.0.1", port: 5278 } )
-
-        if(donationsEnabled) { donate(); }
-      }
+          const message = new OSC.Message(key, msg.progress)
+        
+          osc.send( message, { host : "127.0.0.1", port: 5278 } )
+        }
       
-    }
-});
+      }
+  });
 
 console.log("zendoscd started.")
-console.log("commands: print | donate | reset | exit <return>.")
+console.log("commands: print | donate | reset | update | exit <return>.")
 
 rl.on('line', (line) => {
     
@@ -159,19 +146,23 @@ rl.on('line', (line) => {
       {
         const element = players[key];
 
-        console.log(key);
+        console.log(key + ":" + element);
       }
     }
   }
 
   function donate()
   {
+    donate("start");
+  }
+
+  function donate(id)
+  {
+    donationsEnabled = true;
 
     const testnet = 'wss://s.altnet.rippletest.net:51233';
     const mainet = 'wss://s1.ripple.com';
     const devnet = '???';
-
-    donationsEnabled = true;
 
     const RippleAPI = require('ripple-lib').RippleAPI;
 
@@ -204,7 +195,7 @@ rl.on('line', (line) => {
         const maxLedgerVersion = preparedTx.instructions.maxLedgerVersion
       
         console.log("Prepared transaction instructions:", preparedTx.txJSON)
-        console.log("Transaction cost:", preparedTx.instructions.fee, "XRP")
+  
         console.log("Transaction expires after ledger:", maxLedgerVersion)
         
         return preparedTx.txJSON
@@ -221,11 +212,9 @@ rl.on('line', (line) => {
 
       const txID = response.id
 
-      console.log("Identifying hash:", txID)
+      console.log("txID : ", txID)
 
       const txBlob = response.signedTransaction
-
-      console.log("Signed blob:", txBlob)
 
       async function doSubmit(txID, txBlob) 
       {
