@@ -1,6 +1,7 @@
   const OSC = require("osc-js");
   const firebase = require("firebase");
   const read = require('readline');
+  //const xrpApi = require("../xrp-api") //#todo: how do we make this an http server too?
 
   const rl = read.createInterface({
     input: process.stdin,
@@ -114,6 +115,10 @@ rl.on('line', (line) => {
       case 'donate':
         donate();
         break;
+
+        case 'update':
+          update();
+          break;
     
       default:
         break;
@@ -121,6 +126,10 @@ rl.on('line', (line) => {
   
   });
 
+  function update()
+  {
+
+  }
   function reset()
   {
 
@@ -151,14 +160,69 @@ rl.on('line', (line) => {
     }
   }
 
+  const sender = "rnizuhJE84YuvAS82Rhmdg5pXQb3DirFzR";
+  const secret = "shc11XNQiPymAJ3qc1WzKx6dhghmZ";
+  const destination = "rsEFXRNVBZZM2gnNp7ombogbGWZUS33T6b";
+  const tag = 0
+
   function donate()
   {
-    donate("start");
+    donationsEnabled = true;
+
+    donateRippleLib();
+    donateXrpApi();
+    donateXrpSdk();
   }
 
-  function donate(id)
+  function donateXrpApi()
   {
-    donationsEnabled = true;
+    const request = require('request');  
+    const xrpApiServer = "http://localhost:3000/v1/payments"
+    const bearerToken = "6807a92f3b52c15fd2970d9e1a8615b3"
+  
+    const paymentMessage = 
+    {
+        "payment": 
+        {
+          "source_address": sender,
+          "source_amount": 
+          {
+            "value": "1",
+            "currency": "XRP"
+          },
+          "destination_address": destination,
+          "destination_amount": 
+          {
+            "value": "1",
+            "currency": "XRP"
+          }
+        },
+        "submit": true
+      }
+
+    const options = {
+        url: xrpApiServer,
+        headers: {
+            Authorization: 'Bearer ' + bearerToken
+        },
+        body : paymentMessage,
+        json : true
+    };
+
+    request.post(options, function(err, res, body) 
+    {
+      console.log(body);
+    });
+
+  }
+
+  function donateXrpSdk()
+  {
+    
+  }
+
+  function donateRippleLib()
+  {
 
     const testnet = 'wss://s.altnet.rippletest.net:51233';
     const mainet = 'wss://s1.ripple.com';
@@ -169,11 +233,6 @@ rl.on('line', (line) => {
     const api = new RippleAPI ({
         server: testnet
       });
-
-      const sender = "rnizuhJE84YuvAS82Rhmdg5pXQb3DirFzR";
-      const secret = "shc11XNQiPymAJ3qc1WzKx6dhghmZ";
-      const destination = "rsEFXRNVBZZM2gnNp7ombogbGWZUS33T6b";
-      const tag = 0
 
     api.connect().then(() => 
     {
@@ -240,8 +299,10 @@ rl.on('line', (line) => {
             const txID = txInfo.id
 
             tx = await api.getTransaction(txID, {minLedgerVersion: earliestLedgerVersion})
-            console.log("Transaction result:", tx.outcome.result)
-            console.log("Balance changes:", JSON.stringify(tx.outcome.balanceChanges))
+           
+            console.log("Transaction result:", tx)
+           
+            api.disconnect();
           } 
           catch(error) 
           {
@@ -249,12 +310,11 @@ rl.on('line', (line) => {
           }
         }
 
-        //checkTx(txInfo);
+        checkTx(txInfo);
 
     }).then(() => 
     {
       console.log('donated');
-      return api.disconnect();
     }).catch(console.error);
 
   }

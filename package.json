@@ -4,7 +4,7 @@
   "description": "pushes updates to the zendomaster",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js" 
+    "start": "node index.js"
   },
   "author": "dpurdy",
   "license": "BSD-2-Clause",
@@ -12,6 +12,7 @@
     "firebase": "^6.3.4",
     "osc-js": "^2.0.3",
     "readline": "^1.3.0",
-    "ripple-lib": "*"
+    "request": "^2.88.0",
+    "ripple-lib": "^1.3.3"
   }
 }
