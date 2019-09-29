@@ -171,10 +171,103 @@ rl.on('line', (line) => {
 
     donateRippleLib();
     donateXrpApi();
-    donateXrpSdk();
+    donateXpringSdk();
   }
 
-  function donateXrpApi()
+  //loc(98) -> 100% today (js only 😣)
+  async function donateRippleLib()
+  {
+
+    const testnet = 'wss://s.altnet.rippletest.net:51233';
+    const mainet = 'wss://s1.ripple.com';
+    const devnet = '???';
+
+    const RippleAPI = require('ripple-lib').RippleAPI;
+
+    const api = new RippleAPI ({
+        server: testnet
+      });
+
+    api.connect().then(() => 
+    {
+      async function doPrepare() 
+      {
+        const preparedTx = await api.prepareTransaction(
+          {
+            "TransactionType": "Payment",
+            "Account": sender,
+            "Amount": api.xrpToDrops("1"),
+            "Destination": destination
+          }, 
+          {
+            // Expire this transaction if it doesn't execute within ~5 minutes:
+            "maxLedgerVersionOffset": 75
+          }
+        )
+
+        const maxLedgerVersion = preparedTx.instructions.maxLedgerVersion
+        
+        return preparedTx.txJSON
+
+    }
+
+    return doPrepare();
+
+    }).then(tx =>   
+    {
+      console.log(tx);
+
+      const response = api.sign(tx, secret)
+
+      const txID = response.id
+
+      const txBlob = response.signedTransaction
+
+      async function doSubmit(txID, txBlob) 
+      {
+
+        const latestLedgerVersion = await api.getLedgerVersion()
+        const result = await api.submit(txBlob)
+
+        console.log("Tentative result code:", result.resultCode)
+
+        return { id: txID, version: latestLedgerVersion + 1 }
+      }
+
+    return doSubmit(txID, txBlob)
+
+    }).then((txInfo) => 
+    {
+        async function checkTx(txInfo) 
+        {
+          try 
+          {
+            const earliestLedgerVersion = txInfo.version
+            const txID = txInfo.id
+
+            tx = await api.getTransaction(txID, {minLedgerVersion: earliestLedgerVersion})
+           
+            console.log("Transaction result:", tx)
+           
+            api.disconnect();
+          } 
+          catch(error) 
+          {
+            console.log("Couldn't get transaction outcome:", error)
+          }
+        }
+
+        //checkTx(txInfo); //this doesn't seem to work
+
+    }).then(() => 
+    {
+      console.log('donated');
+    }).catch(console.error);
+
+  }
+
+  //loc(40) -> ~60% less code! (+all web 😀)
+  async function donateXrpApi()
   {
     const request = require('request');  
     const xrpApiServer = "http://localhost:3000/v1/payments"
@@ -216,108 +309,28 @@ rl.on('line', (line) => {
 
   }
 
-  function donateXrpSdk()
+  //loc(21) -> ~80% less code!!! (+all languages 😎)
+  async function donateXpringSdk()
   {
+   
+    const { Wallet, XRPAmount, XpringClient } = require("xpring-js")
+
+    const grpcURL = "grpc.xpring.tech:80";
+
+    const wallet = Wallet.generateWalletFromSeed(secret);
+
+    const amount = new XRPAmount();
+
+    amount.setDrops("1000000")
+
+    const xrpClient = XpringClient.xpringClientWithEndpoint(grpcURL);
+
+    const balance = xrpClient.getBalance(sender);
+
+    const result =  await xrpClient.send(wallet, amount, destination)
+
+    console.log("Sent with result: " + result.getEngineResult())
     
   }
 
-  function donateRippleLib()
-  {
 
-    const testnet = 'wss://s.altnet.rippletest.net:51233';
-    const mainet = 'wss://s1.ripple.com';
-    const devnet = '???';
-
-    const RippleAPI = require('ripple-lib').RippleAPI;
-
-    const api = new RippleAPI ({
-        server: testnet
-      });
-
-    api.connect().then(() => 
-    {
-      async function doPrepare() 
-      {
-        const preparedTx = await api.prepareTransaction(
-          {
-            "TransactionType": "Payment",
-            "Account": sender,
-            "Amount": api.xrpToDrops("1"),
-            "Destination": destination
-          }, 
-          {
-            // Expire this transaction if it doesn't execute within ~5 minutes:
-            "maxLedgerVersionOffset": 75
-          }
-        )
-
-        const maxLedgerVersion = preparedTx.instructions.maxLedgerVersion
-      
-        console.log("Prepared transaction instructions:", preparedTx.txJSON)
-  
-        console.log("Transaction expires after ledger:", maxLedgerVersion)
-        
-        return preparedTx.txJSON
-
-    }
-
-    return doPrepare();
-
-    }).then(tx =>   
-    {
-      console.log(tx);
-
-      const response = api.sign(tx, secret)
-
-      const txID = response.id
-
-      console.log("txID : ", txID)
-
-      const txBlob = response.signedTransaction
-
-      async function doSubmit(txID, txBlob) 
-      {
-
-        const latestLedgerVersion = await api.getLedgerVersion()
-        const result = await api.submit(txBlob)
-
-        console.log("Tentative result code:", result.resultCode)
-        console.log("Tentative result message:", result.resultMessage)
-
-        return { id: txID, version: latestLedgerVersion + 1 }
-      }
-
-    return doSubmit(txID, txBlob)
-
-    }).then((txInfo) => 
-    {
-        async function checkTx(txInfo) 
-        {
-          try 
-          {
-            const earliestLedgerVersion = txInfo.version
-            const txID = txInfo.id
-
-            tx = await api.getTransaction(txID, {minLedgerVersion: earliestLedgerVersion})
-           
-            console.log("Transaction result:", tx)
-           
-            api.disconnect();
-          } 
-          catch(error) 
-          {
-            console.log("Couldn't get transaction outcome:", error)
-          }
-        }
-
-        checkTx(txInfo);
-
-    }).then(() => 
-    {
-      console.log('donated');
-    }).catch(console.error);
-
-  }
-
-
-  
