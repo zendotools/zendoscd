@@ -1,7 +1,6 @@
   const OSC = require("osc-js");
   const firebase = require("firebase");
   const read = require('readline');
-  //const xrpApi = require("../xrp-api") //#todo: how do we make this an http server too?
 
   const rl = read.createInterface({
     input: process.stdin,
@@ -104,23 +103,27 @@ rl.on('line', (line) => {
         break;
 
       case 'exit':
+        
         process.exit(0);
         break;
 
       case 'reset':
-        
+    
         reset(); 
         break;
 
       case 'donate':
+    
         donate();
         break;
 
-        case 'update':
-          update();
-          break;
+      case 'update':
+        
+        update();
+        break;
     
       default:
+        
         break;
     }
   
@@ -128,8 +131,23 @@ rl.on('line', (line) => {
 
   function update()
   {
+    for (const key in players) 
+    {
+      if (players.hasOwnProperty(key)) 
+      {
+        const player = players[key];
 
+        if(player != null) 
+        {
+          const message = new OSC.Message(key, player.progress)
+        
+          osc.send( message, { host : "127.0.0.1", port: 5278 } )
+        }
+      }
+    }
   }
+
+
   function reset()
   {
 
