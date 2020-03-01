@@ -350,7 +350,7 @@ rl.on('line', (line) => {
 
     const amount = new XRPAmount();
 
-    amount.setDrops("1000000")
+    amount.setDrops("166666")
 
     const xrpClient = new XpringClient(grpcURL, true);
 
