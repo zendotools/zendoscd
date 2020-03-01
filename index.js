@@ -153,7 +153,7 @@ rl.on('line', (line) => {
 
         console.log("updating " + key + ":" + element);
 
-        update_osc(key, element.progress);
+        update_osc(key, element);
       }
     }
   }
@@ -187,11 +187,6 @@ rl.on('line', (line) => {
       }
     }
   }
-
-  const sender = "rnizuhJE84YuvAS82Rhmdg5pXQb3DirFzR";
-  const secret = "shc11XNQiPymAJ3qc1WzKx6dhghmZ";
-  const destination = "rsEFXRNVBZZM2gnNp7ombogbGWZUS33T6b";
-  const tag = 0
 
   function donate()
   {
@@ -337,13 +332,19 @@ rl.on('line', (line) => {
 
   }
 
+  
+  const sender = "r9wmZ8Ctfdcr9gctT7LresUve7vs14ADcz";
+  const secret = "shi56WBmbriLgYsTxnUvzncBrESPD";
+  const destination = "rLLSeASKDRhyPJoLpXFJV3MEVJCThtWLqC";
+  const tag = 0
+
   //loc(21) -> ~80% less code!!! (+all languages 😎)
   async function donateXpringSdk()
   {
    
-    const { Wallet, XRPAmount, XpringClient } = require("xpring-js")
+    const { Wallet, XRPAmount, XpringClient, Utils } = require("xpring-js")
 
-    const grpcURL = "grpc.xpring.tech:80";
+    const grpcURL = "alpha.xrp.xpring.io:50051"
 
     const wallet = Wallet.generateWalletFromSeed(secret);
 
@@ -351,13 +352,25 @@ rl.on('line', (line) => {
 
     amount.setDrops("1000000")
 
-    const xrpClient = new XpringClient(grpcURL);
+    const xrpClient = new XpringClient(grpcURL, true);
 
-    const balance = await xrpClient.getBalance(sender);
+    let xSender = Utils.encodeXAddress(sender)
+
+    console.log(xSender)    
+
+    const balance = await xrpClient.getBalance(xSender);
 
     console.log("Sender balance: " + balance)
 
-    const result =  await xrpClient.send(wallet, amount, destination)
+    let XDestination = Utils.encodeXAddress(destination)
+
+    console.log(XDestination)
+
+    const destinationBalance = await xrpClient.getBalance(XDestination);
+
+    console.log("Destination balance: " + destinationBalance)
+    
+    const result = await xrpClient.send(wallet, amount, XDestination)
 
     console.log("Sent with result: " + result.getEngineResult())
     
