@@ -1,8 +1,7 @@
   const OSC = require("osc-js");
   const firebase = require("firebase");
   const read = require('readline');
-  //const xrpApi = require("../xrp-api") //#todo: how do we make this an http server too?
-
+  
   const rl = read.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -24,10 +23,11 @@
   const osc = new OSC({ plugin: new OSC.DatagramPlugin, udpClient: { port: 5278 } })
   osc.open()
 
-  var database = firebase.database();
-  var table = database.ref("players")
   var players = {}
   var donationsEnabled = false;
+
+  var database = firebase.database();
+  var table = database.ref("players")
 
 table.on('child_changed', function(snapshot) 
 {
@@ -41,7 +41,6 @@ table.on('child_changed', function(snapshot)
       {
         key = key.replace("_", ".")
 
-        if(donationsEnabled) { donate(); }
       }
 
       let player = players[key]
@@ -59,9 +58,17 @@ table.on('child_changed', function(snapshot)
 
       if(progress != null && previousProgress != progress)
       {
-        const message = new OSC.Message(key, msg.progress)
+
+        if (progress.includes("true")) 
+        {
+          if (donationsEnabled) { donate(); }
+        } 
+
+        const message = new OSC.Message(key, progress)
         osc.send( message, { host : "127.0.0.1", port: 5278 } ) 
       }
+
+      print()
       
     }
 });
@@ -86,6 +93,7 @@ table.on('child_changed', function(snapshot)
           osc.send( message, { host : "127.0.0.1", port: 5278 } )
         }
       
+        print();
       }
   });
 
@@ -99,7 +107,6 @@ rl.on('line', (line) => {
     switch(command) 
     {
       case 'print':
-      
         print();
         break;
 
@@ -108,7 +115,6 @@ rl.on('line', (line) => {
         break;
 
       case 'reset':
-        
         reset(); 
         break;
 
@@ -126,10 +132,28 @@ rl.on('line', (line) => {
   
   });
 
+
+  function update_osc(id, msg)
+  {
+    const message = new OSC.Message(id, msg);
+    osc.send( message, { host : "127.0.0.1", port: 5278 } );
+  }
+
   function update()
   {
+    for (const key in players) 
+    {
+      if (players.hasOwnProperty(key)) 
+      {
+        const element = players[key];
 
+        console.log("updating " + key + ":" + element);
+
+        update_osc(key, element.progress);
+      }
+    }
   }
+
   function reset()
   {
 
@@ -169,8 +193,8 @@ rl.on('line', (line) => {
   {
     donationsEnabled = true;
 
-    donateRippleLib();
-    donateXrpApi();
+    //donateRippleLib();
+    //donateXrpApi();
     donateXpringSdk();
   }
 
@@ -323,14 +347,14 @@ rl.on('line', (line) => {
 
     amount.setDrops("1000000")
 
-    const xrpClient = XpringClient.xpringClientWithEndpoint(grpcURL);
+    const xrpClient = new XpringClient(grpcURL);
 
-    const balance = xrpClient.getBalance(sender);
+    const balance = await xrpClient.getBalance(sender);
+
+    console.log("Sender balance: " + balance)
 
     const result =  await xrpClient.send(wallet, amount, destination)
 
     console.log("Sent with result: " + result.getEngineResult())
     
   }
-
-
