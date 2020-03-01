@@ -111,6 +111,7 @@ rl.on('line', (line) => {
         break;
 
       case 'exit':
+        
         process.exit(0);
         break;
 
@@ -119,14 +120,17 @@ rl.on('line', (line) => {
         break;
 
       case 'donate':
+    
         donate();
         break;
 
-        case 'update':
-          update();
-          break;
+      case 'update':
+        
+        update();
+        break;
     
       default:
+        
         break;
     }
   
