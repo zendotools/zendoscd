@@ -348,9 +348,7 @@ rl.on('line', (line) => {
 
     const wallet = Wallet.generateWalletFromSeed(secret);
 
-    const amount = new XRPAmount();
-
-    amount.setDrops("166666")
+    const amount = BigInt(166666)
 
     const xrpClient = new XpringClient(grpcURL, true);
 
