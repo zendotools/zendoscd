@@ -370,7 +370,7 @@ rl.on('line', (line) => {
 
     console.log("Destination balance: " + destinationBalance)
     
-    const result = await xrpClient.send(wallet, amount, XDestination)
+    const result = await xrpClient.send(amount, XDestination, wallet)
 
     console.log("Sent with result: " + result.getEngineResult())
     
