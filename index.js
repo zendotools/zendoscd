@@ -342,7 +342,7 @@ rl.on('line', (line) => {
   async function donateXpringSdk()
   {
    
-    const { Wallet, XRPAmount, XpringClient, Utils } = require("xpring-js")
+    const { Wallet, XRPAmount, XpringClient, Utils, TransactionStatus } = require("xpring-js")
 
     const grpcURL = "alpha.xrp.xpring.io:50051"
 
@@ -372,6 +372,12 @@ rl.on('line', (line) => {
     
     const result = await xrpClient.send(amount, XDestination, wallet)
 
-    console.log("Sent with result: " + result.getEngineResult())
+    const status = await xrpClient.getTransactionStatus(result)
+
+    const success = status == TransactionStatus.Succeeded
+
+    console.log("Sent: " + success)
+
+    TransactionStatus.Succeeded
     
   }
