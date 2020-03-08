@@ -345,22 +345,22 @@ rl.on('line', (line) => {
     const { Wallet, XRPAmount, XpringClient, Utils, TransactionStatus } = require("xpring-js")
 
     const grpcURL = "alpha.xrp.xpring.io:50051"
+    
+    const amount = BigInt(166666)
 
     const wallet = Wallet.generateWalletFromSeed(secret);
 
-    const amount = BigInt(166666)
-
     const xrpClient = new XpringClient(grpcURL, true);
 
-    let xSender = Utils.encodeXAddress(sender)
+    const xSender = Utils.encodeXAddress(sender)
 
-    console.log(xSender)    
+    console.log(xSender)
 
     const balance = await xrpClient.getBalance(xSender);
 
     console.log("Sender balance: " + balance)
 
-    let XDestination = Utils.encodeXAddress(destination)
+    const XDestination = Utils.encodeXAddress(destination)
 
     console.log(XDestination)
 
@@ -375,7 +375,5 @@ rl.on('line', (line) => {
     const success = status == TransactionStatus.Succeeded
 
     console.log("Sent: " + success)
-
-    TransactionStatus.Succeeded
     
   }
