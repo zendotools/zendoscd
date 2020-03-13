@@ -333,8 +333,8 @@ rl.on('line', (line) => {
   }
 
   
-  const sender = "r9wmZ8Ctfdcr9gctT7LresUve7vs14ADcz";
-  const secret = "shi56WBmbriLgYsTxnUvzncBrESPD";
+  const sender = "";
+  const secret = "";
   const destination = "rLLSeASKDRhyPJoLpXFJV3MEVJCThtWLqC";
   const tag = 0
 
