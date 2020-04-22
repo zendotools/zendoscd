@@ -332,25 +332,29 @@ rl.on('line', (line) => {
 
   }
 
-  
   const sender = "";
   const secret = "";
-  const destination = "rLLSeASKDRhyPJoLpXFJV3MEVJCThtWLqC";
   const tag = 0
 
   //loc(21) -> ~80% less code!!! (+all languages 😎)
   async function donateXpringSdk()
   {
-   
-    const { Wallet, XRPAmount, XpringClient, Utils, TransactionStatus } = require("xpring-js")
-
-    const grpcURL = "alpha.xrp.xpring.io:50051"
     
-    const amount = BigInt(166666)
+    const { Wallet, XRPClient, XRPLNetwork, Utils, TransactionStatus, PayIDClient } = require("xpring-js");
+
+    const payIDClient = new PayIDClient("xrpl-mainnet");
+
+    const XDestination = await payIDClient.addressForPayID("GiveDirectly$payid.charity")
+
+    const grpcURL = "main.xrp.xpring.io:50051"
+
+    const amount = BigInt(166666);
 
     const wallet = Wallet.generateWalletFromSeed(secret);
 
-    const xrpClient = new XpringClient(grpcURL, true);
+    const xrpClient = new XRPClient(grpcURL, true)
+
+    xrpClient.network = XRPLNetwork.mainet
 
     const xSender = Utils.encodeXAddress(sender)
 
@@ -360,8 +364,6 @@ rl.on('line', (line) => {
 
     console.log("Sender balance: " + balance)
 
-    const XDestination = Utils.encodeXAddress(destination)
-
     console.log(XDestination)
 
     const destinationBalance = await xrpClient.getBalance(XDestination);
@@ -370,7 +372,11 @@ rl.on('line', (line) => {
     
     const result = await xrpClient.send(amount, XDestination, wallet)
 
-    const status = await xrpClient.getTransactionStatus(result)
+    console.log("Result: "  + result)
+
+    const status = await xrpClient.getPaymentStatus(result)
+
+    console.log("Status: " + status)
 
     const success = status == TransactionStatus.Succeeded
 
