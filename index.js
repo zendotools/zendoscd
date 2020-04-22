@@ -9,7 +9,7 @@
 
   var config = 
   {
-      apiKey: "AIzaSyC9ctnmbntIyud9b2LrjZGEoDBlCOX_BiA",
+      apiKey: "",
       authDomain: "zendo-v1.firebaseapp.com",
       databaseURL: "https://zendo-v1.firebaseio.com",
       projectId: "zendo-v1",
