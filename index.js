@@ -1,247 +1,248 @@
-  const OSC = require("osc-js");
-  const firebase = require("firebase");
-  const read = require('readline');
-  
-  const rl = read.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+const OSC = require("osc-js");
+const firebase = require("firebase");
+const read = require('readline');
 
-  var config = 
-  {
-      apiKey: "",
-      authDomain: "zendo-v1.firebaseapp.com",
-      databaseURL: "https://zendo-v1.firebaseio.com",
-      projectId: "zendo-v1",
-      storageBucket: "zendo-v1.appspot.com",
-      messagingSenderId: "1050567670060",
-      appId: "1:1050567670060:web:9f392d667834c056"
-    };
+const rl = read.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 
-  firebase.initializeApp(config);
+var config = 
+{
+    apiKey: "AIzaSyC9ctnmbntIyud9b2LrjZGEoDBlCOX_BiA",
+    authDomain: "zendo-v1.firebaseapp.com",
+    databaseURL: "https://zendo-v1.firebaseio.com",
+    projectId: "zendo-v1",
+    storageBucket: "zendo-v1.appspot.com",
+    messagingSenderId: "1050567670060",
+    appId: "1:1050567670060:web:9f392d667834c056"
+  };
 
-  const osc = new OSC({ plugin: new OSC.DatagramPlugin, udpClient: { port: 5278 } })
-  osc.open()
+firebase.initializeApp(config);
 
-  var players = {}
-  var donationsEnabled = false;
+const osc = new OSC({ plugin: new OSC.DatagramPlugin, udpClient: { port: 5278 } })
+osc.open()
 
-  var database = firebase.database();
-  var table = database.ref("players")
+var players = {}
+var donationsEnabled = false;
+
+var database = firebase.database();
+var table = database.ref("players")
 
 table.on('child_changed', function(snapshot) 
+{
+  var key = snapshot.key;
+  var msg = snapshot.val();
+
+  if(msg != null) 
+  {
+
+    if(key.includes("_"))
+    {
+      key = key.replace("_", ".")
+
+    }
+
+    let player = players[key]
+
+    let previousProgress = null
+    
+    if(player != null)
+    {
+      previousProgress = player.progress
+    }
+
+    let progress = msg.progress
+
+    players[key] = progress
+
+    if(progress != null && previousProgress != progress)
+    {
+
+      if (progress.includes("true")) 
+      {
+        if (donationsEnabled) { donate(); }
+      } 
+
+      const message = new OSC.Message(key, progress)
+      osc.send( message, { host : "127.0.0.1", port: 5278 } ) 
+    }
+
+    print()
+    
+  }
+});
+
+table.on('child_added', function(snapshot) 
 {
     var key = snapshot.key;
     var msg = snapshot.val();
 
     if(msg != null) 
     {
+      key = key.replace("_", ".")
 
-      if(key.includes("_"))
+      const player = players[key];
+
+      if(player == null) 
       {
-        key = key.replace("_", ".")
+        players[key] = msg.progress
 
-      }
-
-      let player = players[key]
-
-      let previousProgress = null
+        const message = new OSC.Message(key, msg.progress)
       
-      if(player != null)
-      {
-        previousProgress = player.progress
+        osc.send( message, { host : "127.0.0.1", port: 5278 } )
       }
-
-      let progress = msg.progress
-
-      players[key] = progress
-
-      if(progress != null && previousProgress != progress)
-      {
-
-        if (progress.includes("true")) 
-        {
-          if (donationsEnabled) { donate(); }
-        } 
-
-        const message = new OSC.Message(key, progress)
-        osc.send( message, { host : "127.0.0.1", port: 5278 } ) 
-      }
-
-      print()
-      
+    
+      print();
     }
 });
-
-  table.on('child_added', function(snapshot) 
-  {
-      var key = snapshot.key;
-      var msg = snapshot.val();
-
-      if(msg != null) 
-      {
-        key = key.replace("_", ".")
-
-        const player = players[key];
-
-        if(player == null) 
-        {
-          players[key] = msg.progress
-
-          const message = new OSC.Message(key, msg.progress)
-        
-          osc.send( message, { host : "127.0.0.1", port: 5278 } )
-        }
-      
-        print();
-      }
-  });
 
 console.log("zendoscd started.")
 console.log("commands: print | donate | reset | update | exit <return>.")
 
 rl.on('line', (line) => {
-    
-    const command = line.toLowerCase().trim()
-
-    switch(command) 
-    {
-      case 'print':
-        print();
-        break;
-
-      case 'exit':
-        
-        process.exit(0);
-        break;
-
-      case 'reset':
-        reset(); 
-        break;
-
-      case 'donate':
-    
-        donate();
-        break;
-
-      case 'update':
-        
-        update();
-        break;
-    
-      default:
-        
-        break;
-    }
   
-  });
+  const command = line.toLowerCase().trim()
 
-
-  function update_osc(id, msg)
+  switch(command) 
   {
-    const message = new OSC.Message(id, msg);
-    osc.send( message, { host : "127.0.0.1", port: 5278 } );
+    case 'print':
+      print();
+      break;
+
+    case 'exit':
+      
+      process.exit(0);
+      break;
+
+    case 'reset':
+      reset(); 
+      break;
+
+    case 'donate':
+  
+      donate();
+      break;
+
+    case 'update':
+      
+      update();
+      break;
+  
+    default:
+      
+      break;
   }
 
-  function update()
+});
+
+
+function update_osc(id, msg)
+{
+  const message = new OSC.Message(id, msg);
+  osc.send( message, { host : "127.0.0.1", port: 5278 } );
+}
+
+function update()
+{
+  for (const key in players) 
   {
-    for (const key in players) 
+    if (players.hasOwnProperty(key)) 
     {
-      if (players.hasOwnProperty(key)) 
-      {
-        const element = players[key];
+      const element = players[key];
 
-        console.log("updating " + key + ":" + element);
+      console.log("updating " + key + ":" + element);
 
-        update_osc(key, element);
-      }
+      update_osc(key, element);
     }
   }
+}
 
-  function reset()
+function reset()
+{
+
+  var database = firebase.database();
+  var table = database.ref("players")
+
+  table.remove()
+      .then(function() {
+        console.log("reset succeeded.")
+        players = {}
+        donationsEnabled = false
+      })
+      .catch(function(error) {
+        console.log("reset failed: " + error.message)
+      });
+}
+
+function print() 
+{
+  for (const key in players) 
   {
-
-    var database = firebase.database();
-    var table = database.ref("players")
-
-    table.remove()
-        .then(function() {
-          console.log("reset succeeded.")
-          players = {}
-          donationsEnabled = false
-        })
-        .catch(function(error) {
-          console.log("reset failed: " + error.message)
-        });
-  }
-
-  function print() 
-  {
-    for (const key in players) 
+    if (players.hasOwnProperty(key)) 
     {
-      if (players.hasOwnProperty(key)) 
-      {
-        const element = players[key];
+      const element = players[key];
 
-        console.log(key + ":" + element);
-      }
+      console.log(key + ":" + element);
     }
   }
+}
 
-  function donate()
-  {
-    donationsEnabled = true;
-    
-    donateXpringSdk();
-  }
+function donate()
+{
+  donationsEnabled = true;
+  
+  donateXpringSdk();
+}
 
-  const sender = "";
-  const secret = "";
+const sender = "";
+const sponsor = "";
+const causePayID = "GiveDirectly$payid.charity"
 
-  //loc(21) -> ~80% less code!!! (+all languages 😎)
-  async function donateXpringSdk()
-  {
-    
-    const { Wallet, XRPClient, XRPLNetwork, Utils, TransactionStatus, PayIDClient } = require("xpring-js");
 
-    const payIDClient = new PayIDClient("xrpl-mainnet");
+async function donateXpringSdk()
+{
+  
+  const { Wallet, XRPClient, XRPLNetwork, Utils, TransactionStatus, PayIDClient } = require("xpring-js");
 
-    const XDestination = await payIDClient.addressForPayID("GiveDirectly$payid.charity")
+  const payIDClient = new PayIDClient("xrpl-mainnet");
 
-    const grpcURL = "main.xrp.xpring.io:50051"
+  const XDestination = await payIDClient.addressForPayID(causePayID)
 
-    const amount = BigInt(166666);
+  const grpcURL = "main.xrp.xpring.io:50051"
 
-    const wallet = Wallet.generateWalletFromSeed(secret);
+  const amount = BigInt(166666);
 
-    const xrpClient = new XRPClient(grpcURL, true)
+  const wallet = Wallet.generateWalletFromSeed(sponsor);
 
-    xrpClient.network = XRPLNetwork.mainet
+  const xrpClient = new XRPClient(grpcURL, true)
 
-    const xSender = Utils.encodeXAddress(sender)
+  xrpClient.network = XRPLNetwork.mainet
 
-    console.log(xSender)
+  const xSender = Utils.encodeXAddress(sender)
 
-    const balance = await xrpClient.getBalance(xSender);
+  console.log(xSender)
 
-    console.log("Sender balance: " + balance)
+  const balance = await xrpClient.getBalance(xSender);
 
-    console.log(XDestination)
+  console.log("Sender balance: " + balance)
 
-    const destinationBalance = await xrpClient.getBalance(XDestination);
+  console.log(XDestination)
 
-    console.log("Destination balance: " + destinationBalance)
-    
-    const result = await xrpClient.send(amount, XDestination, wallet)
+  const destinationBalance = await xrpClient.getBalance(XDestination);
 
-    console.log("Result: "  + result)
+  console.log("Destination balance: " + destinationBalance)
+  
+  const result = await xrpClient.send(amount, XDestination, wallet)
 
-    const status = await xrpClient.getPaymentStatus(result)
+  console.log("Result: "  + result)
 
-    console.log("Status: " + status)
+  const status = await xrpClient.getPaymentStatus(result)
 
-    const success = status == TransactionStatus.Succeeded
+  console.log("Status: " + status)
 
-    console.log("Sent: " + success)
-    
-  }
+  const success = status == TransactionStatus.Succeeded
+
+  console.log("Sent: " + success)
+  
+}
