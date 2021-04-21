@@ -128,6 +128,11 @@ rl.on('line', (line) => {
       
       update();
       break;
+
+      case 'stats':
+      
+        stats();
+        break;
   
     default:
       
@@ -245,4 +250,54 @@ async function donateXpringSdk()
 
   console.log("Sent: " + success)
   
+}
+
+async function stats()
+{
+        const Parse = require('parse/node')
+
+        Parse.initialize("APPLICATION_ID");
+
+        Parse.serverURL = 'http://code.zendo.tools:1337/parse'
+
+		Parse.masterKey = "MASTER_KEY"
+
+        const query = new Parse.Query(Parse.User);
+
+        query.greaterThan("donatedMinutes", 0);
+
+        const donators = await query.count();
+
+        console.log("Donators: " + donators)
+
+		const pipeline = 
+		[
+			{ 
+				group: 
+				{ 
+					objectId: null, 
+					total: { $sum: '$donatedMinutes' } 
+				} 
+			}
+		];
+
+		const totalMinutes = new Parse.Query(Parse.User);
+
+		totalMinutes.aggregate(pipeline)
+		.then(function(results) 
+		{
+			console.log("Minutes Donated: " + results[0].total)
+		})
+		.catch(function(error) 
+		{
+    		
+		  });
+		  
+//		const leaders = new Parse.Query(Parse.User);
+//		leaders.greaterThan("donatedMinutes", 0);
+//		leaders.ascending("donatedMinutes");
+
+//		const top = leaders.findAll()
+//		console.log(top)
+
 }
